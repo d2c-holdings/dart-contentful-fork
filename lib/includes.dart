@@ -21,39 +21,43 @@ class Includes {
       Includes._(_IncludesMap.fromJson(json));
 
   Includes._(this.map);
+
   final _IncludesMap map;
 
-  List<Map<String, dynamic>> resolveLinks(List<dynamic> items) =>
-      items.map(convert.map).map(_walkMap).toList();
+  List<Map<String, dynamic>> resolveLinks(List<dynamic> items, {required int level, required int? maxLevel}) =>
+      items.map(convert.map).map((item) => _walkMap(item, level: level, maxLevel: maxLevel)).toList();
 
-  Map<String, dynamic> _walkMap(Map<String, dynamic> entry) =>
-      entry_utils.isLink(entry)
-          ? map.resolveLink(entry).fold(() => entry, _walkMap)
-          : entry_utils.fields(entry).fold(
-                () => entry,
-                (fields) => {
-                  ...entry,
-                  'fields': fields.map(_resolveEntryField),
-                },
-              );
+  Map<String, dynamic> _walkMap(Map<String, dynamic> entry, {required int level, required int? maxLevel}) {
+    if (maxLevel != null && level == maxLevel) return {};
+    return entry_utils.isLink(entry)
+        ? map.resolveLink(entry).fold(() => entry, (item) => _walkMap(item, level: level + 1, maxLevel: maxLevel))
+        : entry_utils.fields(entry).fold(
+          () => entry,
+          (fields) =>
+      {
+        ...entry,
+        'fields': fields.map((key, value) => _resolveEntryField(key, value, level: level, maxLevel: maxLevel)),
+      },
+    );
+  }
 
-  MapEntry<String, dynamic> _resolveEntryField(String key, dynamic object) {
+  MapEntry<String, dynamic> _resolveEntryField(String key, dynamic object, {required int level, required int? maxLevel}) {
     if (_isListOfLinks(object)) {
-      return MapEntry(key, resolveLinks(object));
+      return MapEntry(key, resolveLinks(object, level: level + 1, maxLevel: maxLevel));
     } else if (object is! Map) {
       return MapEntry(key, object);
     }
 
     final fieldMap = some(convert.map(object));
     final resolveLink = () =>
-        fieldMap.filter(entry_utils.isLink).bind(map.resolveLink).map(_walkMap);
+        fieldMap.filter(entry_utils.isLink).bind(map.resolveLink).map((entry) => _walkMap(entry, level: level + 1, maxLevel: maxLevel));
     final resolveRichText =
         () => fieldMap.filter(entry_utils.isRichText).map(_walkRichText);
 
     return resolveLink().orElse(resolveRichText).fold(
           () => MapEntry(key, object),
           (field) => MapEntry(key, field),
-        );
+    );
   }
 
   Map<String, dynamic> _walkRichText(Map<String, dynamic> doc) {
@@ -61,11 +65,12 @@ class Includes {
       ...doc,
       'data': entry_utils.dataTarget(doc).bind(map.resolveLink).fold(
             () => doc['data'],
-            (entry) => {
-              ...doc['data'],
-              'target': entry,
-            },
-          ),
+            (entry) =>
+        {
+          ...doc['data'],
+          'target': entry,
+        },
+      ),
     };
 
     return entry_utils
@@ -73,26 +78,27 @@ class Includes {
         .map((nodes) => nodes.map(_walkRichText))
         .fold(
           () => root,
-          (nodes) => {
-            ...root,
-            'content': nodes.toList(),
-          },
-        );
+          (nodes) =>
+      {
+        ...root,
+        'content': nodes.toList(),
+      },
+    );
   }
 }
 
-Map<String, Map<String, dynamic>> _addEntriesToMap(
-        Map<String, Map<String, dynamic>> map,
-        List<Map<String, dynamic>> entries) =>
+Map<String, Map<String, dynamic>> _addEntriesToMap(Map<String, Map<String, dynamic>> map,
+    List<Map<String, dynamic>> entries) =>
     entries.fold(
       map,
-      (map, entry) => entry_utils.id(entry).fold(
-        () => map,
-        (id) {
-          map[id] = entry;
-          return map;
-        },
-      ),
+          (map, entry) =>
+          entry_utils.id(entry).fold(
+                () => map,
+                (id) {
+              map[id] = entry;
+              return map;
+            },
+          ),
     );
 
 class _IncludesMap {
