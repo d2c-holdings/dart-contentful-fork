@@ -76,7 +76,7 @@ class Client {
     jsonr = optionOf(jsonr['includes'])
         .map(convert.map)
         .map(Includes.fromJson)
-        .map((includes) => includes.resolveLinks(jsonr['items']))
+        .map((includes) => includes.resolveLinks(jsonr['items'], level: 0, maxLevel: int.tryParse(query["include"] ?? "")))
         .fold(
           () => jsonr,
           (items) => {
