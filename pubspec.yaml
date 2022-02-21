@@ -1,0 +1,23 @@
+name: contentful
+version: "3.0.5"
+description: Contentful Delivery API client for Dart. This Dart package is a small abstraction on top of the Contentful Delivery API.
+homepage: https://gitlab.com/arisechurch/dart-contentful
+repository: https://gitlab.com/arisechurch/dart-contentful
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
+dependencies:
+  dartz: ^0.10.0
+  equatable: ^2.0.0
+  http: ^0.13.0
+  json_annotation: ^4.0.0
+  meta: ^1.3.0
+
+dev_dependencies:
+  build_runner: ^2.1.4
+  collection: ^1.15.0
+  json_serializable: ^5.0.2
+  pedantic: ^1.11.0
+  test: ^1.16.5
+  mocktail: ^0.1.2
